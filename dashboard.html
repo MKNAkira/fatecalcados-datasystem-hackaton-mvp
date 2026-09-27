@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FATECalçados - Analytics Premium</title>
+    
+    <!-- Fontes e Ícones -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    
+    <!-- Tailwind CSS e Chart.js -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: { sans: ['Inter', 'sans-serif'] },
+                    colors: {
+                        brand: { 50: '#eef2ff', 100: '#e0e7ff', 500: '#6366f1', 600: '#4f46e5', 900: '#312e81' }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { background-color: #F8FAFC; }
+        .card-hover { transition: all 0.3s ease; }
+        .card-hover:hover { transform: translateY(-2px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.01); }
+        
+        /* Animação de entrada suave */
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        .delay-100 { animation-delay: 100ms; }
+        .delay-200 { animation-delay: 200ms; }
+        
+        /* Scrollbar customizada para a tabela */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+    </style>
+</head>
+<body class="text-slate-800 p-4 md:p-8 max-w-7xl mx-auto">
+
+    <header class="flex flex-col md:flex-row justify-between items-start md:items-center mb-10 gap-6 animate-fade-in">
+        <div class="flex items-center gap-4">
+            <div class="w-12 h-12 bg-brand-600 rounded-xl flex items-center justify-center shadow-lg shadow-brand-500/30">
+                <i class="ph ph-sneaker text-white text-2xl"></i>
+            </div>
+            <div>
+                <h1 class="text-2xl font-bold text-slate-900 tracking-tight">FATECalçados Analytics</h1>
+                <p class="text-sm text-slate-500 font-medium mt-0.5">Gestão de Fidelidade & Margem de Lucro</p>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button onclick="carregarDados()" id="btn-atualizar" class="flex items-center gap-2 text-sm text-slate-600 bg-white border border-slate-200 hover:bg-slate-50 px-4 py-2.5 rounded-xl font-medium transition-colors shadow-sm">
+                <i class="ph ph-arrows-clockwise text-lg"></i>
+                Atualizar
+            </button>
+            <button onclick="gerarDadosFicticios()" class="flex items-center gap-2 bg-slate-900 text-white px-5 py-2.5 rounded-xl text-sm font-semibold hover:bg-slate-800 transition-all shadow-lg shadow-slate-900/20">
+                <i class="ph ph-database text-lg"></i>
+                Gerar Dados (Seed)
+            </button>
+        </div>
+    </header>
+
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-6 py-4 rounded-xl shadow-2xl transform transition-all duration-300 translate-y-full opacity-0 z-50 flex items-center gap-3 min-w-[300px]">
+        <div id="toast-icon" class="w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center">
+            <i class="ph ph-check text-green-400 text-lg"></i>
+        </div>
+        <div>
+            <p id="toast-title" class="text-sm font-bold text-white">Sucesso</p>
+            <p id="toast-message" class="text-xs text-slate-300 mt-0.5">Operação realizada.</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8 animate-fade-in delay-100">
+        
+        <!-- Faturamento -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 card-hover relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-10">
+                <i class="ph ph-trend-up text-6xl text-brand-600"></i>
+            </div>
+            <div class="flex justify-between items-start mb-4">
+                <p class="text-sm text-slate-500 font-semibold uppercase tracking-wider">Faturamento Líquido</p>
+            </div>
+            <h2 class="text-3xl font-bold text-slate-900 mb-1" id="kpi-faturamento">R$ 0,00</h2>
+            <div class="flex items-center gap-1.5 mt-2">
+                <span class="bg-emerald-100 text-emerald-700 text-xs font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
+                    <i class="ph ph-arrow-up-right"></i> Caixa da Loja
+                </span>
+            </div>
+        </div>
+        
+        <!-- Custo com Descontos -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 card-hover relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-10">
+                <i class="ph ph-tag text-6xl text-rose-500"></i>
+            </div>
+            <div class="flex justify-between items-start mb-4">
+                <p class="text-sm text-slate-500 font-semibold uppercase tracking-wider">Custo de Descontos</p>
+            </div>
+            <h2 class="text-3xl font-bold text-rose-500 mb-1" id="kpi-custo">R$ 0,00</h2>
+            <div class="flex items-center gap-1.5 mt-2">
+                <span class="bg-rose-50 text-rose-600 text-xs font-bold px-2 py-0.5 rounded-md">
+                    Investimento em Fidelidade
+                </span>
+            </div>
+        </div>
+
+        <!-- Ticket Médio -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 card-hover relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-10">
+                <i class="ph ph-receipt text-6xl text-slate-900"></i>
+            </div>
+            <p class="text-sm text-slate-500 font-semibold uppercase tracking-wider mb-4">Ticket Médio (Líquido)</p>
+            <h2 class="text-3xl font-bold text-slate-900 mb-1" id="kpi-ticket">R$ 0,00</h2>
+            <p class="text-xs text-slate-400 font-medium mt-2">Por transação concluída</p>
+        </div>
+
+        <!-- Total de Clientes -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 card-hover relative overflow-hidden">
+            <div class="absolute top-0 right-0 p-6 opacity-10">
+                <i class="ph ph-users text-6xl text-slate-900"></i>
+            </div>
+            <p class="text-sm text-slate-500 font-semibold uppercase tracking-wider mb-4">Total de Clientes</p>
+            <h2 class="text-3xl font-bold text-slate-900 mb-1" id="kpi-clientes">0</h2>
+            <p class="text-xs text-slate-400 font-medium mt-2">Ativos no programa</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-2xl p-6 border border-slate-100 mb-8 card-hover animate-fade-in delay-200">
+        <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-6 gap-4">
+            <div>
+                <h3 class="text-lg font-bold text-slate-900">Evolução do Faturamento Líquido</h3>
+                <p class="text-sm text-slate-500 mt-1">Comparativo dos últimos 7 dias de operação</p>
+            </div>
+            <div class="flex items-center gap-3 bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100">
+                <span class="w-2.5 h-2.5 rounded-full bg-brand-600 shadow-[0_0_8px_rgba(79,70,229,0.6)]"></span>
+                <span class="text-xs font-semibold text-slate-600 uppercase tracking-wide">Receita Realizada</span>
+            </div>
+        </div>
+        <!-- Wrapper do gráfico com altura fixa -->
+        <div class="relative w-full h-[320px]">
+            <canvas id="revenueChart"></canvas>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 xl:grid-cols-3 gap-8 animate-fade-in delay-200">
+        
+        <!-- Gráfico de Rosca: Níveis -->
+        <div class="bg-white rounded-2xl p-6 border border-slate-100 card-hover xl:col-span-1 flex flex-col">
+            <div class="mb-6">
+                <h3 class="text-lg font-bold text-slate-900">Segmentação por Nível</h3>
+                <p class="text-sm text-slate-500 mt-1">Distribuição da base fidelizada</p>
+            </div>
+            <div class="relative h-[220px] w-full mb-8 flex-grow flex items-center justify-center">
+                <canvas id="levelsChart"></canvas>
+            </div>
+            <div id="levels-legend" class="space-y-2 mt-auto">
+                <!-- Preenchido via JS -->
+            </div>
+        </div>
+
+        <!-- Tabela de Ranking de Clientes -->
+        <div class="bg-white rounded-2xl border border-slate-100 card-hover xl:col-span-2 flex flex-col overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-white">
+                <div>
+                    <h3 class="text-lg font-bold text-slate-900">Top Clientes</h3>
+                    <p class="text-sm text-slate-500 mt-1">Os maiores pontuadores do programa</p>
+                </div>
+                <button class="text-sm font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
+                    Ver todos <i class="ph ph-arrow-right"></i>
+                </button>
+            </div>
+            <div class="overflow-x-auto">
+                <table class="w-full text-left border-collapse">
+                    <thead>
+                        <tr class="bg-slate-50/50 text-slate-500 text-xs uppercase tracking-wider font-semibold">
+                            <th class="px-6 py-4 rounded-tl-lg">Cliente</th>
+                            <th class="px-6 py-4">Nível Atual</th>
+                            <th class="px-6 py-4 text-right">Saldo de Pontos</th>
+                            <th class="px-6 py-4 text-right rounded-tr-lg">Desconto Disp.</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-sm divide-y divide-slate-100" id="ranking-table">
+                        <tr>
+                            <td colspan="4" class="text-center py-12 text-slate-400">
+                                <i class="ph ph-spinner-gap animate-spin text-3xl mb-2"></i>
+                                <p>Carregando dados...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE_URL = 'http://127.0.0.1:8000';
+        let revenueChartInstance = null;
+        let levelsChartInstance = null;
+
+        // Formatação de moeda e pontos
+        const formatBRL = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        const formatPts = (value) => new Intl.NumberFormat('pt-BR').format(value) + ' pts';
+
+        // Sistema de Toast Premium
+        const showToast = (title, message, type = 'success') => {
+            const toast = document.getElementById('toast');
+            const iconContainer = document.getElementById('toast-icon');
+            
+            document.getElementById('toast-title').innerText = title;
+            document.getElementById('toast-message').innerText = message;
+            
+            if(type === 'error') {
+                iconContainer.className = 'w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center';
+                iconContainer.innerHTML = '<i class="ph ph-x text-red-400 text-lg"></i>';
+            } else {
+                iconContainer.className = 'w-8 h-8 rounded-full bg-green-500/20 flex items-center justify-center';
+                iconContainer.innerHTML = '<i class="ph ph-check text-green-400 text-lg"></i>';
+            }
+
+            toast.classList.remove('translate-y-full', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-full', 'opacity-0');
+            }, 4000);
+        };
+
+        // Função principal de carregamento
+        async function carregarDados() {
+            const btn = document.getElementById('btn-atualizar');
+            const icon = btn.querySelector('i');
+            icon.classList.add('animate-spin');
+            
+            try {
+                await Promise.all([
+                    carregarKPIs(),
+                    carregarGraficoTemporal(),
+                    carregarNiveis(),
+                    carregarRanking()
+                ]);
+            } catch (error) {
+                console.error("Erro de conexão:", error);
+                showToast("Falha na Conexão", "A API Python (Uvicorn) está rodando?", "error");
+            } finally {
+                setTimeout(() => icon.classList.remove('animate-spin'), 500);
+            }
+        }
+
+        // Carregar Cards KPI
+        async function carregarKPIs() {
+            const res = await fetch(`${API_BASE_URL}/dashboard/kpis`);
+            if(!res.ok) throw new Error("Erro na API");
+            const data = await res.json();
+            
+            document.getElementById('kpi-faturamento').innerText = formatBRL(data.faturamento_liquido);
+            document.getElementById('kpi-custo').innerText = formatBRL(data.custo_descontos);
+            document.getElementById('kpi-ticket').innerText = formatBRL(data.ticket_medio);
+            document.getElementById('kpi-clientes').innerText = data.total_clientes;
+        }
+
+        // Carregar Gráfico de Linha (Estilo Premium)
+        async function carregarGraficoTemporal() {
+            const res = await fetch(`${API_BASE_URL}/dashboard/grafico`);
+            const data = await res.json();
+
+            const ctx = document.getElementById('revenueChart').getContext('2d');
+            
+            if (revenueChartInstance) revenueChartInstance.destroy();
+
+            // Criação de Gradiente para o gráfico
+            const gradient = ctx.createLinearGradient(0, 0, 0, 300);
+            gradient.addColorStop(0, 'rgba(79, 70, 229, 0.25)'); // Indigo 600 translúcido
+            gradient.addColorStop(1, 'rgba(79, 70, 229, 0.0)');
+
+            revenueChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: data.map(d => d.data),
+                    datasets: [{
+                        label: 'Faturamento',
+                        data: data.map(d => d.valor),
+                        borderColor: '#4F46E5', // Indigo 600
+                        backgroundColor: gradient,
+                        borderWidth: 3,
+                        pointBackgroundColor: '#ffffff',
+                        pointBorderColor: '#4F46E5',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.4, // Curva suave idêntica ao Workspace.pdf
+                        fill: true
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: '#1E293B',
+                            padding: 12,
+                            titleFont: { family: 'Inter', size: 13 },
+                            bodyFont: { family: 'Inter', size: 14, weight: 'bold' },
+                            callbacks: {
+                                label: function(context) {
+                                    return ' ' + formatBRL(context.parsed.y);
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: '#F1F5F9', drawBorder: false },
+                            border: { display: false },
+                            ticks: { 
+                                color: '#94A3B8',
+                                font: { family: 'Inter', size: 12 },
+                                callback: function(value) {
+                                    if(value >= 1000) return 'R$ ' + (value/1000).toFixed(1) + 'k';
+                                    return 'R$ ' + value;
+                                }
+                            }
+                        },
+                        x: {
+                            grid: { display: false, drawBorder: false },
+                            border: { display: false },
+                            ticks: { color: '#94A3B8', font: { family: 'Inter', size: 12 } }
+                        }
+                    },
+                    interaction: { mode: 'index', intersect: false }
+                }
+            });
+        }
+
+        // Carregar Gráfico de Rosca (Segmentação)
+        async function carregarNiveis() {
+            const res = await fetch(`${API_BASE_URL}/dashboard/niveis`);
+            const data = await res.json();
+
+            const ctx = document.getElementById('levelsChart').getContext('2d');
+            if (levelsChartInstance) levelsChartInstance.destroy();
+
+            // Cores: Ouro (Amarelo vivo), Prata (Cinza azulado), Bronze (Laranja)
+            const bgColors = ['#F59E0B', '#94A3B8', '#D97706'];
+
+            levelsChartInstance = new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Ouro', 'Prata', 'Bronze'],
+                    datasets: [{
+                        data: [data.Ouro, data.Prata, data.Bronze],
+                        backgroundColor: bgColors,
+                        borderWidth: 0,
+                        hoverOffset: 6
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '75%', // Buraco no meio mais fino e elegante
+                    plugins: { legend: { display: false }, tooltip: { bodyFont: { family: 'Inter' } } }
+                }
+            });
+
+            // Legenda Customizada em HTML
+            const total = (data.Ouro + data.Prata + data.Bronze) || 1;
+            const legendHtml = [
+                { nome: 'Ouro', valor: data.Ouro, cor: bgColors[0], icon: 'ph-crown' },
+                { nome: 'Prata', valor: data.Prata, cor: bgColors[1], icon: 'ph-medal' },
+                { nome: 'Bronze', valor: data.Bronze, cor: bgColors[2], icon: 'ph-star' }
+            ].map(item => {
+                const percent = ((item.valor / total) * 100).toFixed(1);
+                return `
+                <div class="flex justify-between items-center p-3 rounded-xl border border-slate-50 hover:bg-slate-50 transition-colors">
+                    <div class="flex items-center gap-3">
+                        <div class="w-8 h-8 rounded-lg flex items-center justify-center text-white shadow-sm" style="background-color: ${item.cor}">
+                            <i class="ph ${item.icon}"></i>
+                        </div>
+                        <div>
+                            <span class="block text-sm font-bold text-slate-900">${item.nome}</span>
+                            <span class="block text-xs text-slate-500">${item.valor} clientes</span>
+                        </div>
+                    </div>
+                    <span class="text-sm font-bold text-slate-700">${percent}%</span>
+                </div>`;
+            }).join('');
+            
+            document.getElementById('levels-legend').innerHTML = legendHtml;
+        }
+
+        // Carregar Tabela de Ranking
+        async function carregarRanking() {
+            const res = await fetch(`${API_BASE_URL}/dashboard/ranking`);
+            const data = await res.json();
+            
+            const tbody = document.getElementById('ranking-table');
+            tbody.innerHTML = '';
+
+            if (data.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center py-12 text-slate-500"><i class="ph ph-empty text-3xl mb-2 block"></i>Nenhum cliente cadastrado ainda.</td></tr>`;
+                return;
+            }
+
+            data.forEach(cliente => {
+                // Lógica visual baseada no nível
+                let badgeClass = 'bg-slate-100 text-slate-700 border-slate-200';
+                let icon = 'ph-star';
+                if (cliente.nivel === 'Ouro') { badgeClass = 'bg-amber-100 text-amber-700 border-amber-200'; icon = 'ph-crown'; }
+                else if (cliente.nivel === 'Bronze') { badgeClass = 'bg-orange-100 text-orange-800 border-orange-200'; }
+
+                // Pega a inicial do nome para o Avatar
+                const inicial = cliente.nome.charAt(0).toUpperCase();
+                
+                // Cálculo de qual desconto ele já pode pedir (100 pts = R$ 5)
+                const descontoPossivel = Math.floor(cliente.pontos / 100) * 5;
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-slate-50 transition-colors group">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full bg-indigo-100 text-brand-600 font-bold flex items-center justify-center text-sm">
+                                    ${inicial}
+                                </div>
+                                <span class="font-semibold text-slate-900">${cliente.nome}</span>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${badgeClass}">
+                                <i class="ph ${icon}"></i> ${cliente.nivel}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <span class="font-bold text-slate-700">${cliente.pontos.toLocaleString('pt-BR')} pts</span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <span class="font-bold text-emerald-600">${formatBRL(descontoPossivel)}</span>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        // Função do Botão Seed
+        async function gerarDadosFicticios() {
+            try {
+                // Notifica que começou (Feedback visual)
+                showToast("Processando...", "Gerando dados no banco, aguarde.", "success");
+                
+                const res = await fetch(`${API_BASE_URL}/seed`, { method: 'POST' });
+                if(!res.ok) throw new Error("Erro na requisição Seed");
+                
+                const data = await res.json();
+                showToast("Banco Atualizado", data.mensagem, "success");
+                
+                // Atualiza a tela com os novos dados
+                carregarDados(); 
+            } catch (error) {
+                console.error("Erro no Seed:", error);
+                showToast("Erro", "Não foi possível gerar dados. A API está ligada?", "error");
+            }
+        }
+
+        // Inicialização
+        window.onload = carregarDados;
+    </script>
+</body>
+</html>
