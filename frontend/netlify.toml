@@ -1,0 +1,10 @@
+# Publica SOMENTE a pasta do dashboard (o código da API não vai para o Netlify)
+[build]
+  publish = "frontend"
+
+# Cabeçalhos básicos de segurança
+[[headers]]
+  for = "/*"
+  [headers.values]
+    X-Content-Type-Options = "nosniff"
+    Referrer-Policy = "strict-origin-when-cross-origin"
