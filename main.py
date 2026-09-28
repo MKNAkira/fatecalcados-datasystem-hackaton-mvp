@@ -178,9 +178,15 @@ def get_ranking_clientes(db: Session = Depends(get_db)):
 
 # --- ROTA PARA DADOS FICTÍCIOS (Pessoa 4 do Desafio) ---
 @app.post("/seed")
-def popular_banco(db: Session = Depends(get_db)):
-    if db.query(Cliente).count() > 1: # Verifica se já geramos dados antes
-         return {"mensagem": "O banco já possui dados."}
+def popular_banco(resetar: bool = False, db: Session = Depends(get_db)):
+    if db.query(Cliente).count() > 1 and not resetar:
+        return {"mensagem": "O banco já possui dados. Use resetar=true para gerar novos."}
+
+    if resetar:
+        # Compras primeiro, por causa da chave estrangeira para clientes
+        db.query(Compra).delete()
+        db.query(Cliente).delete()
+        db.commit()
          
     # Criando 20 clientes
     nomes = ["Ana", "Carlos", "Beatriz", "João", "Mariana", "Pedro", "Lucas", "Julia", "Fernanda", "Rafael", "Camila", "Bruno", "Amanda", "Diego", "Leticia", "Rodrigo", "Patricia", "Thiago", "Natalia", "Marcelo"]
